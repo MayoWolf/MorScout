@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.netlify/
+.env
+.env.*
+!.env.example
+coverage/
+.DS_Store
+*.pem
+*service-account*.json

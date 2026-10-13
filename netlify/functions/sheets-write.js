@@ -1,61 +1,23 @@
-const { google } = require("googleapis");
+import { api, json, readJson, requireMethod, requireSession } from "../lib/security.js";
+import { reportRow, sheetFor, sheetsClient } from "../lib/sheets.js";
 
-function getSheetsClient() {
-  const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
-  const privateKey = (process.env.GOOGLE_PRIVATE_KEY || "").replace(/\\n/g, "\n");
+export default api(async (request) => {
+  requireMethod(request, "POST");
+  requireSession(request);
+  const body = await readJson(request);
+  const sheet = sheetFor(body, true);
+  const row = reportRow(body, sheet);
+  const { spreadsheetId, sheets } = sheetsClient(true);
+  await sheets.spreadsheets.values.append({
+    spreadsheetId,
+    range: sheet.write,
+    valueInputOption: "RAW",
+    insertDataOption: "INSERT_ROWS",
+    requestBody: { values: [row] }
+  }, { timeout: 10000, retry: false });
+  return json({ ok: true });
+});
 
-  if (!email || !privateKey) {
-    throw new Error("Missing GOOGLE_SERVICE_ACCOUNT_EMAIL or GOOGLE_PRIVATE_KEY");
-  }
-
-  const auth = new google.auth.JWT({
-    email,
-    key: privateKey,
-    scopes: ["https://www.googleapis.com/auth/spreadsheets"]
-  });
-
-  return google.sheets({ version: "v4", auth });
-}
-
-exports.handler = async (event) => {
-  if (event.httpMethod !== "POST") {
-    return {
-      statusCode: 405,
-      body: JSON.stringify({ error: "Method not allowed" })
-    };
-  }
-
-  try {
-    const { sheetName, row } = JSON.parse(event.body || "{}");
-    const spreadsheetId = process.env.GOOGLE_SHEETS_ID;
-
-    if (!spreadsheetId) {
-      throw new Error("Missing GOOGLE_SHEETS_ID");
-    }
-
-    if (!sheetName || !Array.isArray(row)) {
-      throw new Error("sheetName and row are required");
-    }
-
-    const sheets = getSheetsClient();
-
-    await sheets.spreadsheets.values.append({
-      spreadsheetId,
-      range: `${sheetName}!A1`,
-      valueInputOption: "USER_ENTERED",
-      requestBody: {
-        values: [row]
-      }
-    });
-
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ ok: true })
-    };
-  } catch (error) {
-    return {
-      statusCode: 400,
-      body: JSON.stringify({ error: error.message })
-    };
-  }
+export const config = {
+  rateLimit: { action: "rate_limit", aggregateBy: ["ip", "domain"], windowSize: 60, windowLimit: 120 }
 };

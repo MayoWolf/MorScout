@@ -12,6 +12,22 @@
   --radius-sm: 12px;
 }
 
+.access-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: var(--bg);
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  overflow-y: auto;
+}
+
+.access-form { width: min(100%, 440px); }
+.access-form h1, .access-form p { margin: 0; }
+.access-tools { position: relative; z-index: 101; padding: 0.5rem 1rem; text-align: right; }
+button:disabled { opacity: 0.6; cursor: wait; }
+
 * {
   box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;

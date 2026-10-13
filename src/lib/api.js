@@ -3,7 +3,7 @@ async function callTBA(path) {
   const response = await fetch(`/api/tba-proxy?path=${encodeURIComponent(path)}`);
   if (!response.ok) {
     const data = await response.json().catch(() => ({}));
-    throw new Error(data.error || "TBA Proxy Request failed");
+    throw requestError(response, data, true);
   }
   return response.json();
 }
@@ -16,22 +16,44 @@ export function fetchEventMatches(eventKey) {
   return callTBA(`/event/${eventKey}/matches/simple`);
 }
 
-async function callApi(path, body) {
+function requestError(response, data, notifyExpiry) {
+  if (response.status === 401 && notifyExpiry) {
+    window.dispatchEvent(new Event("morscout-session-expired"));
+  }
+  const message = response.status === 429 ? "Too many requests. Wait a minute and try again." :
+    data.error || "Request failed";
+  return Object.assign(new Error(message), { status: response.status });
+}
+
+async function callApi(path, body, method = "POST", notifyExpiry = true) {
   const response = await fetch(path, {
-    method: "POST",
+    method,
+    credentials: "same-origin",
     headers: {
       "Content-Type": "application/json"
     },
-    body: JSON.stringify(body)
+    body: body === undefined ? undefined : JSON.stringify(body)
   });
 
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    throw new Error(data.error || "Request failed");
+    throw requestError(response, data, notifyExpiry);
   }
 
   return data;
+}
+
+export function checkSession() {
+  return callApi("/api/session", undefined, "GET", false);
+}
+
+export function startSession(accessCode) {
+  return callApi("/api/session", { accessCode }, "POST", false);
+}
+
+export function endSession() {
+  return callApi("/api/session", undefined, "DELETE", false);
 }
 
 export function submitPitScout(payload) {

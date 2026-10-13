@@ -131,7 +131,7 @@ function RankingsPage() {
   return (
     <section className="form">
       <h2>Rankings + Team Profiles</h2>
-      <p>Live aggregation from <code>MatchScouting</code> tab.</p>
+      <p>Live aggregation from <code>MS(CAASV)</code> tab.</p>
       <button className="primary-button" type="button" onClick={onRefresh}>Refresh Analytics</button>
       {status && <p className="status">{status}</p>}
 

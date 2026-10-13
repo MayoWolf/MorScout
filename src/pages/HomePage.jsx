@@ -32,17 +32,11 @@ function HomePage({ onNavigate }) {
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
 
-  const hasApiKey = !!import.meta.env.VITE_TBA_API_KEY;
-
   async function loadEvents(year = 2026) {
     try {
       setLoading(true);
       setError("");
       
-      if (!hasApiKey) {
-        throw new Error("API Key (VITE_TBA_API_KEY) is missing in Netlify settings. Ensure you re-deployed after adding it.");
-      }
-
       const data = await fetchEvents(year);
       
       if (!data || data.length === 0) {
@@ -91,6 +85,15 @@ function HomePage({ onNavigate }) {
   }
 
   useEffect(() => {
+    function retryAfterSignIn() {
+      if (selectedEvent) syncSelectedEvent(selectedEvent);
+      else loadEvents();
+    }
+    window.addEventListener("morscout-session-restored", retryAfterSignIn);
+    return () => window.removeEventListener("morscout-session-restored", retryAfterSignIn);
+  }, [selectedEvent]);
+
+  useEffect(() => {
     if (events.length === 0) return;
 
     const defaultEvent = findDefaultEvent(events);
@@ -137,6 +140,9 @@ function HomePage({ onNavigate }) {
         )}
         
         {status && <p style={{ fontSize: '0.8rem', color: 'var(--accent)', margin: '0.5rem 0 0' }}>{status}</p>}
+        {status === "Error fetching schedule" && selectedEvent && (
+          <button type="button" className="secondary-button" onClick={() => syncSelectedEvent(selectedEvent)}>Retry Schedule</button>
+        )}
       </div>
 
       <div className="card-grid">
